@@ -3,23 +3,22 @@ module.exports.config = {
   version: "1.0.2",
   hasPermssion: 0,
   credits: "حمودي سان 🇸🇩",
-  description: "قائمة الأوامر كاملة",
+  description: "قائمة الأوامر كاملة مزخرفة",
   commandCategory: "النظام",
-  usages: "[Name module]",
+  usages: "[رقم الصفحة/اسم الأمر]",
   cooldowns: 5,
   envConfig: {
     autoUnsend: true,
-    delayUnsend: 20
+    delayUnsend: 60
   }
 };
 
 module.exports.languages = {
   "en": {
-    "moduleInfo": "🍭✨ 「 %1 」 ✨🍬\n🍬 %2 🍭\n\n📌 Usage: %3\n📂 Category: %4\n⏳ Waiting time: %5 seconds\n👑 Permission: %6\n\n🍭 Coded with love by %7 🍬",
-    "helpList": "🍬🍭 There are %1 fun commands in Dora Bot! 🍭🍬\nUse: ✨ “%2help nameCommand” ✨ to see how to use each one! 🍬\n━━━━━━━━━━━━━━━━━━━",
-    "user": "🍭 Sweet User 🍬",
-    "adminGroup": "🍬 Group Princess (Admin) 🍭",
-    "adminBot": "👑 Dora’s Magical Admin 👑"
+    "moduleInfo": "───═━━━━━\n⏤͟͟͞͞   𝙸𝙽𝙵𝙾𝚁𝙼𝙰𝚃𝙸𝙾𝙽\n────────\n⑉ Name: %1\n⑉ Desc: %2\n⑉ Usage: %3\n⑉ Category: %4\n⑉ Wait: %5s\n⑉ Auth: %6\n────────\n.𝙲𝚁𝙴𝙳𝙸𝚃𝚂: %7",
+    "user": "User",
+    "adminGroup": "Group Admin",
+    "adminBot": "Bot Admin"
   }
 };
 
@@ -62,41 +61,36 @@ module.exports.run = function ({ api, event, args, getText }) {
   if (!command) {
     const arrayInfo = [];
     const page = parseInt(args[0]) || 1;
-    const numberOfOnePage = 100;
-    let i = 0;
-
-    let msg = "🍭･ﾟ: *🍬･ﾟ:* 　　 *:･ﾟ🍭*:･ﾟ🍬\n";
-    msg += "🍬🍭 Bot Commands ᏴϴᏆ. Dora Bot 🍭🍬\n";
-    msg += "🍭･ﾟ: *🍬･ﾟ:* 　　 *:･ﾟ🍭*:･ﾟ🍬\n\n";
-
+    const numberOfOnePage = 10; // عدد الأوامر في كل صفحة
+    
     for (var [name] of (commands)) {
       arrayInfo.push(name);
     }
-
     arrayInfo.sort();
 
+    const totalPages = Math.ceil(arrayInfo.length / numberOfOnePage);
     const startSlice = numberOfOnePage * page - numberOfOnePage;
-    i = startSlice;
     const returnArray = arrayInfo.slice(startSlice, startSlice + numberOfOnePage);
 
+    let msg = "───═━━━━━\n";
+    msg += "⏤͟͟͞͞   𝙲𝙼𝙳    𝙻𝙸𝚂𝚃\n";
+    msg += "────────\n";
+
     for (let item of returnArray) {
-      msg += `🍬✨ ${++i}. 『${item}』 ✨🍭\n`;
-      msg += `🍭 Description: ${commands.get(item).config.description}\n`;
-      msg += "━━━━━━━━━━━━━━━ 🍬\n\n";
+      msg += `⑉ ${item}\n`;
     }
 
-    msg += `🍭✧･ﾟ:* *:･ﾟ✧🍬\n`;
-    msg += `📖 Page: (${page}/${Math.ceil(arrayInfo.length / numberOfOnePage)})\n`;
-    msg += `👑 Prefix: °${prefix}°\n`;
-    msg += `📜 Total Commands: ${arrayInfo.length}\n`;
-    msg += "🍭✧･ﾟ:* *:･ﾟ✧🍬";
+    msg += "────────\n";
+    msg += `.𝙰𝙻𝙻 𝙲𝙼𝙳 : ${arrayInfo.length}\n`;
+    msg += `.𝙿𝙰𝙶𝙴 ${page} 𝙾𝙵 ${totalPages}\n`;
+    msg += "────────";
 
     return api.sendMessage(msg, threadID, async (error, info) => {
       if (autoUnsend) {
         await new Promise(resolve => setTimeout(resolve, delayUnsend * 1000));
         return api.unsendMessage(info.messageID);
       }
-    });
+    }, messageID);
   }
 
   return api.sendMessage(
