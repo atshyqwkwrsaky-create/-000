@@ -2,7 +2,7 @@ module.exports.config = {
   name: "المطور",
   version: "1.0.0",
   hasPermssion: 0,
-  credits: "كولو",
+  credits: "ليفاي",
   description: "يعرض معلومات المطور بطريقة دورا",
   commandCategory: "المطور",
   usages: "",
@@ -25,12 +25,12 @@ module.exports.run = async ({ api, event }) => {
 اسم المطور: 🍭💖 حمــودي ســان 💖🍭
 
 🔗 رابط الفيسبوك:  
-https://www.facebook.com/DoraYogiEXE
+https://www.facebook.com/profile.php?id=
 
 🌍 البلد: السودان 🇸🇩
 🎭 الشخصية المفضلة: Dora
-🎮 ألعاب المطور: Free Fire (ID: 2717565103) 🏴‍☠️
-📱 واتساب: +249900042500
+🎮 ألعاب المطور: Free Fire (ID: ) 🏴‍☠️
+📱 وتساب: 
 
 💖🍭 "يـــعجــز الأطفــال والمراهقــون عــن تقليــدي" 🍭💖
 ♥️🥰 أحبكم يا سنافري — أفعل ما بوسعي لإسعادكم 🌸`;
