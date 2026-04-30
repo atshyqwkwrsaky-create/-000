@@ -21,8 +21,7 @@ module.exports.run = async ({ api, event }) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // الرسالة النهائية بمعلومات المطور
-    const devInfo = `🌈✨🧑‍💻
-اسم المطور: 🍭💖 حمــودي ســان 💖🍭
+    const devInfo =اسم المطور:ᏝᎬᏉᎨ ᎯᏨᏦᎬᏒᎷᎯᏁ 🔀
 
 🔗 رابط الفيسبوك:  
 https://www.facebook.com/profile.php?id=
