@@ -1,12 +1,12 @@
-const fs   = require("fs");
+const fs = require("fs");
 const path = require("path");
 
 module.exports.config = {
-  name: "نظام_وايد",
-  version: "2.0.1",
+  name: "وايد",
+  version: "3.0.0",
   hasPermssion: 2,
-  credits: "ليفاي",
-  description: "لوحة تحكم WAYED — إدارة كاملة للبوت من الشات",
+  credits: "ليفاي + تعديل",
+  description: "لوحة تحكم للبوت من الشات",
   commandCategory: "المطور",
   usages: "",
   cooldowns: 0
@@ -14,56 +14,45 @@ module.exports.config = {
 
 const DEV_IDS = ["61583632364472", "100081948980908"];
 const CMDS_PATH = __dirname;
-const EVNT_PATH = path.join(__dirname, "..", "events");
-const D = "────────────────────";
 
 function isAdmin(id) {
-  if (DEV_IDS.includes(String(id))) return true;
-  return ((global.config && global.config.ADMINBOT) || []).includes(String(id));
+  return DEV_IDS.includes(String(id)) ||
+    ((global.config?.ADMINBOT || []).includes(String(id)));
 }
 
 function listJS(dir) {
-  try { return fs.readdirSync(dir).filter(f => f.endsWith(".js")).sort(); }
-  catch(e) { return []; }
-}
-
-function readSafe(fp) {
   try {
-    const c = fs.readFileSync(fp, "utf8");
-    return c.length > 3500 ? c.slice(0, 3500) + "\n\n…[مقطوع]" : c;
-  } catch(e) { return null; }
+    return fs.readdirSync(dir).filter(f => f.endsWith(".js"));
+  } catch {
+    return [];
+  }
 }
 
 function hotReload(fp) {
   try {
     delete require.cache[require.resolve(fp)];
-    const mod = require(fp);
-    if (mod.config && mod.config.name) {
-      global.client.commands.set(mod.config.name.toLowerCase(), mod);
-      return `⚡ تم تحميل ${mod.config.name}`;
+    const cmd = require(fp);
+
+    if (cmd.config?.name) {
+      global.client.commands.set(cmd.config.name, cmd);
+      return `⚡ تم إعادة تحميل: ${cmd.config.name}`;
     }
     return "⚠️ تم الحفظ فقط";
-  } catch(e) {
-    return `❌ خطأ: ${e.message}`;
+  } catch (e) {
+    return "❌ " + e.message;
   }
-}
-
-function resolvePath(name) {
-  let fp = path.join(CMDS_PATH, name);
-  if (!fs.existsSync(fp)) fp = path.join(EVNT_PATH, name);
-  return fs.existsSync(fp) ? fp : null;
 }
 
 // القائمة
 const MENU = `
 ───═━━━━━
-⏤͟͟͞͞   WAYED SYSTEM
+⏤͟͟͞͞ WAYED SYSTEM
 ────────
-⑉ تعديل
 ⑉ ملفات
-⑉ اضافة
-⑉ حذف
-⑉ كود
+⑉ تعديل [اسم]
+⑉ اضافة [اسم]
+⑉ حذف [اسم]
+⑉ كود [JS]
 ────────
 `;
 
@@ -71,39 +60,42 @@ const MENU = `
 module.exports.run = async function ({ api, event, args }) {
   const { threadID, messageID, senderID } = event;
 
-  if (!isAdmin(senderID)) 
-    return api.sendMessage("🚫 هذا الأمر للمطور فقط", threadID, messageID);
+  if (!isAdmin(senderID))
+    return api.sendMessage("🚫 الأمر دا للمطور بس", threadID, messageID);
 
-  const sub = (args[0] || "").toLowerCase();
+  const sub = args[0];
 
-  // القائمة
   if (!sub) return api.sendMessage(MENU, threadID, messageID);
 
-  // الملفات
+  // عرض الملفات
   if (sub === "ملفات") {
     const files = listJS(CMDS_PATH);
-    return api.sendMessage(files.join("\n"), threadID, messageID);
+    return api.sendMessage(files.join("\n") || "مافي ملفات", threadID, messageID);
   }
 
   // تعديل
   if (sub === "تعديل") {
-    const fileName = args[1];
-    if (!fileName) return api.sendMessage("اكتب اسم الملف", threadID, messageID);
+    const name = args[1];
+    if (!name) return api.sendMessage("اكتب اسم الملف", threadID, messageID);
 
-    const fp = resolvePath(fileName);
-    if (!fp) return api.sendMessage("❌ غير موجود", threadID, messageID);
+    const filePath = path.join(CMDS_PATH, name + ".js");
+    if (!fs.existsSync(filePath))
+      return api.sendMessage("❌ الملف غير موجود", threadID, messageID);
 
-    const content = readSafe(fp);
+    const content = fs.readFileSync(filePath, "utf8");
+
     return api.sendMessage(
-      content + "\n\n✏️ رد بالكود الجديد",
+      content.slice(0, 3000) + "\n\n✏️ رد بالكود الجديد",
       threadID,
       (err, info) => {
-        global.client.handleReply.push({
+        if (!global.handleReply) global.handleReply = [];
+
+        global.handleReply.push({
           name: this.config.name,
-          author: senderID,
           messageID: info.messageID,
-          type: "edit",
-          path: fp
+          author: senderID,
+          path: filePath,
+          type: "edit"
         });
       },
       messageID
@@ -130,7 +122,7 @@ module.exports.config = {
 };
 
 module.exports.run = async function({ api, event }) {
-  api.sendMessage("تم تشغيل الامر", event.threadID);
+  api.sendMessage("شغال ✅", event.threadID);
 };
 `);
 
@@ -144,15 +136,17 @@ module.exports.run = async function({ api, event }) {
     if (!name) return api.sendMessage("اكتب الاسم", threadID, messageID);
 
     const filePath = path.join(CMDS_PATH, name + ".js");
-    if (!fs.existsSync(filePath)) return api.sendMessage("❌ غير موجود", threadID, messageID);
+
+    if (!fs.existsSync(filePath))
+      return api.sendMessage("❌ غير موجود", threadID, messageID);
 
     fs.unlinkSync(filePath);
-    global.client.commands.delete(name.toLowerCase());
+    global.client.commands.delete(name);
 
     return api.sendMessage("🗑️ تم الحذف", threadID, messageID);
   }
 
-  // كود
+  // تنفيذ كود
   if (sub === "كود") {
     const code = args.slice(1).join(" ");
     try {
@@ -164,21 +158,20 @@ module.exports.run = async function({ api, event }) {
     }
   }
 
-  return api.sendMessage("❓ خيار غير معروف", threadID, messageID);
+  return api.sendMessage("❓ أمر غير معروف", threadID, messageID);
 };
 
-// الردود
+// الرد
 module.exports.handleReply = async function ({ api, event, handleReply }) {
-  const { body, threadID, messageID, senderID } = event;
-  if (senderID != handleReply.author) return;
+  if (event.senderID != handleReply.author) return;
 
   if (handleReply.type === "edit") {
     try {
-      fs.writeFileSync(handleReply.path, body);
+      fs.writeFileSync(handleReply.path, event.body);
       const msg = hotReload(handleReply.path);
-      return api.sendMessage("✅ تم التعديل\n" + msg, threadID, messageID);
+      return api.sendMessage("✅ تم التعديل\n" + msg, event.threadID);
     } catch (e) {
-      return api.sendMessage("❌ " + e.message, threadID, messageID);
+      return api.sendMessage("❌ " + e.message, event.threadID);
     }
   }
 };
