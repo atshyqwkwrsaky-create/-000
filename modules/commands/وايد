@@ -1,25 +1,63 @@
-const fs = require("fs-extra");
+const fs   = require("fs");
 const path = require("path");
 
 module.exports.config = {
   name: "نظام_وايد",
-  version: "2.1.0",
+  version: "2.0.1",
   hasPermssion: 2,
-  credits: "ليفاي & حمودي سان",
-  description: "لوحة تحكم إدارة الملفات والأوامر",
+  credits: "ليفاي",
+  description: "لوحة تحكم WAYED — إدارة كاملة للبوت من الشات",
   commandCategory: "المطور",
-  usages: "[تعديل/ملفات/اضافة/حذف/كود]",
+  usages: "",
   cooldowns: 0
 };
 
-// ── إعدادات المسارات ──
-const CMDS_PATH = path.join(__dirname);
-const D = "────────";
+const DEV_IDS = ["61583632364472", "100081948980908"];
+const CMDS_PATH = __dirname;
+const EVNT_PATH = path.join(__dirname, "..", "events");
+const D = "────────────────────";
 
-// ── القائمة الرئيسية بالزخرفة المطلوبة ──
-const MENU = 
-`───═━━━━━
-⏤͟͟͞͞   𝙽𝙸𝚉𝙰𝙼  𝚆𝙰𝚈𝙴𝙳
+function isAdmin(id) {
+  if (DEV_IDS.includes(String(id))) return true;
+  return ((global.config && global.config.ADMINBOT) || []).includes(String(id));
+}
+
+function listJS(dir) {
+  try { return fs.readdirSync(dir).filter(f => f.endsWith(".js")).sort(); }
+  catch(e) { return []; }
+}
+
+function readSafe(fp) {
+  try {
+    const c = fs.readFileSync(fp, "utf8");
+    return c.length > 3500 ? c.slice(0, 3500) + "\n\n…[مقطوع]" : c;
+  } catch(e) { return null; }
+}
+
+function hotReload(fp) {
+  try {
+    delete require.cache[require.resolve(fp)];
+    const mod = require(fp);
+    if (mod.config && mod.config.name) {
+      global.client.commands.set(mod.config.name.toLowerCase(), mod);
+      return `⚡ تم تحميل ${mod.config.name}`;
+    }
+    return "⚠️ تم الحفظ فقط";
+  } catch(e) {
+    return `❌ خطأ: ${e.message}`;
+  }
+}
+
+function resolvePath(name) {
+  let fp = path.join(CMDS_PATH, name);
+  if (!fs.existsSync(fp)) fp = path.join(EVNT_PATH, name);
+  return fs.existsSync(fp) ? fp : null;
+}
+
+// القائمة
+const MENU = `
+───═━━━━━
+⏤͟͟͞͞   WAYED SYSTEM
 ────────
 ⑉ تعديل
 ⑉ ملفات
@@ -27,121 +65,120 @@ const MENU =
 ⑉ حذف
 ⑉ كود
 ────────
-.𝚂𝚃𝙰𝚃𝚄𝚂 : 𝙾𝙽𝙻𝙸𝙽𝙴
-.𝙿𝚁𝙴𝙵𝙸𝚇 : /
-────────`;
+`;
 
-// ── دالة التحقق من المطور ──
-function isAdmin(id) {
-  const DEV_IDS = ["61583632364472", "100081948980908"];
-  return DEV_IDS.includes(String(id)) || (global.config.ADMINBOT || []).includes(String(id));
-}
-
+// التشغيل
 module.exports.run = async function ({ api, event, args }) {
   const { threadID, messageID, senderID } = event;
-  if (!isAdmin(senderID)) return api.sendMessage("⚠️ عذراً، هذا الأمر مخصص لمطوري البوت فقط.", threadID, messageID);
 
-  const sub = (args[0] || "").trim();
+  if (!isAdmin(senderID)) 
+    return api.sendMessage("🚫 هذا الأمر للمطور فقط", threadID, messageID);
 
+  const sub = (args[0] || "").toLowerCase();
+
+  // القائمة
   if (!sub) return api.sendMessage(MENU, threadID, messageID);
 
-  // ── قسم تعديل ملف ──
-  if (sub === "تعديل") {
-    const fileName = args.slice(1).join(" ").trim();
-    if (!fileName) {
-      const files = fs.readdirSync(CMDS_PATH).filter(f => f.endsWith(".js"));
-      return api.sendMessage(`📝 اختر الملف المراد تعديله بالرد على هذه الرسالة باسمه كاملاً:\n${D}\n${files.join("\n")}`, threadID, (err, info) => {
-        global.client.handleReply.push({ name: this.config.name, author: senderID, messageID: info.messageID, type: "pick_edit" });
-      }, messageID);
-    }
-    return startEdit(api, event, fileName, senderID);
-  }
-
-  // ── قسم عرض الملفات ──
+  // الملفات
   if (sub === "ملفات") {
-    const files = fs.readdirSync(CMDS_PATH).filter(f => f.endsWith(".js"));
-    return api.sendMessage(`📂 ملفات الأوامر (${files.length}):\n${D}\n${files.join("\n")}\n${D}\nلقراءة ملف: /نظام_وايد ملفات [الاسم]`, threadID, messageID);
+    const files = listJS(CMDS_PATH);
+    return api.sendMessage(files.join("\n"), threadID, messageID);
   }
 
-  // ── قسم إضافة أمر ──
+  // تعديل
+  if (sub === "تعديل") {
+    const fileName = args[1];
+    if (!fileName) return api.sendMessage("اكتب اسم الملف", threadID, messageID);
+
+    const fp = resolvePath(fileName);
+    if (!fp) return api.sendMessage("❌ غير موجود", threadID, messageID);
+
+    const content = readSafe(fp);
+    return api.sendMessage(
+      content + "\n\n✏️ رد بالكود الجديد",
+      threadID,
+      (err, info) => {
+        global.client.handleReply.push({
+          name: this.config.name,
+          author: senderID,
+          messageID: info.messageID,
+          type: "edit",
+          path: fp
+        });
+      },
+      messageID
+    );
+  }
+
+  // اضافة
   if (sub === "اضافة") {
-    const cmdName = args[1];
-    if (!cmdName) return api.sendMessage("❗ يجب تحديد اسم الأمر الجديد. مثال: /نظام_وايد اضافة test", threadID, messageID);
-    return api.sendMessage(`⸙͎ إضافة أمر: ${cmdName}.js\n${D}\nأرسل الكود الآن كـرد على هذه الرسالة.`, threadID, (err, info) => {
-      global.client.handleReply.push({ name: this.config.name, author: senderID, messageID: info.messageID, type: "new", cmdName });
-    }, messageID);
+    const name = args[1];
+    if (!name) return api.sendMessage("اكتب اسم الامر", threadID, messageID);
+
+    const filePath = path.join(CMDS_PATH, name + ".js");
+
+    fs.writeFileSync(filePath, `
+module.exports.config = {
+  name: "${name}",
+  version: "1.0.0",
+  hasPermssion: 0,
+  credits: "WAYED",
+  description: "امر جديد",
+  commandCategory: "عام",
+  usages: "",
+  cooldowns: 3
+};
+
+module.exports.run = async function({ api, event }) {
+  api.sendMessage("تم تشغيل الامر", event.threadID);
+};
+`);
+
+    const msg = hotReload(filePath);
+    return api.sendMessage("✅ تم الانشاء\n" + msg, threadID, messageID);
   }
 
-  // ── قسم تشغيل كود JS ──
+  // حذف
+  if (sub === "حذف") {
+    const name = args[1];
+    if (!name) return api.sendMessage("اكتب الاسم", threadID, messageID);
+
+    const filePath = path.join(CMDS_PATH, name + ".js");
+    if (!fs.existsSync(filePath)) return api.sendMessage("❌ غير موجود", threadID, messageID);
+
+    fs.unlinkSync(filePath);
+    global.client.commands.delete(name.toLowerCase());
+
+    return api.sendMessage("🗑️ تم الحذف", threadID, messageID);
+  }
+
+  // كود
   if (sub === "كود") {
     const code = args.slice(1).join(" ");
-    if (!code) return api.sendMessage("💻 أرسل الكود الذي تريد تنفيذه كـرد.", threadID, (err, info) => {
-      global.client.handleReply.push({ name: this.config.name, author: senderID, messageID: info.messageID, type: "eval" });
-    }, messageID);
-    return executeEval(api, event, code);
+    try {
+      let result = eval(code);
+      if (result instanceof Promise) result = await result;
+      return api.sendMessage(String(result), threadID, messageID);
+    } catch (e) {
+      return api.sendMessage("❌ " + e.message, threadID, messageID);
+    }
   }
 
-  return api.sendMessage("❓ خيار غير موجود، استخدم القائمة الرئيسية.", threadID, messageID);
+  return api.sendMessage("❓ خيار غير معروف", threadID, messageID);
 };
 
+// الردود
 module.exports.handleReply = async function ({ api, event, handleReply }) {
-  const { threadID, messageID, senderID, body } = event;
-  if (String(senderID) !== String(handleReply.author)) return;
+  const { body, threadID, messageID, senderID } = event;
+  if (senderID != handleReply.author) return;
 
-  // 1. معالجة اختيار ملف للتعديل
-  if (handleReply.type === "pick_edit") {
-    return startEdit(api, event, body.trim(), senderID);
-  }
-
-  // 2. معالجة حفظ الكود بعد التعديل
-  if (handleReply.type === "write") {
-    const fp = path.join(CMDS_PATH, handleReply.fileName);
+  if (handleReply.type === "edit") {
     try {
-      fs.writeFileSync(fp, body, "utf8");
-      reloadCommand(fp, handleReply.fileName.replace(".js", ""));
-      return api.sendMessage(`✅ تم تحديث الملف "${handleReply.fileName}" بنجاح!`, threadID, messageID);
-    } catch (e) { return api.sendMessage(`❌ خطأ أثناء الحفظ: ${e.message}`, threadID, messageID); }
-  }
-
-  // 3. معالجة إضافة أمر جديد
-  if (handleReply.type === "new") {
-    const fp = path.join(CMDS_PATH, `${handleReply.cmdName}.js`);
-    try {
-      fs.writeFileSync(fp, body, "utf8");
-      reloadCommand(fp, handleReply.cmdName);
-      return api.sendMessage(`✅ تم إنشاء وتحميل الأمر "${handleReply.cmdName}"!`, threadID, messageID);
-    } catch (e) { return api.sendMessage(`❌ فشل الإنشاء: ${e.message}`, threadID, messageID); }
-  }
-
-  // 4. معالجة الـ Eval
-  if (handleReply.type === "eval") {
-    return executeEval(api, event, body);
+      fs.writeFileSync(handleReply.path, body);
+      const msg = hotReload(handleReply.path);
+      return api.sendMessage("✅ تم التعديل\n" + msg, threadID, messageID);
+    } catch (e) {
+      return api.sendMessage("❌ " + e.message, threadID, messageID);
+    }
   }
 };
-
-// ── دالة مساعدة لبدء التعديل ──
-function startEdit(api, event, fileName, senderID) {
-  const fp = path.join(CMDS_PATH, fileName.endsWith(".js") ? fileName : fileName + ".js");
-  if (!fs.existsSync(fp)) return api.sendMessage("❌ الملف غير موجود.", event.threadID, event.messageID);
-  const content = fs.readFileSync(fp, "utf8");
-  return api.sendMessage(`🜸 تعديل: ${fileName}\n${D}\n${content.slice(0, 2000)}\n${D}\nأرسل الكود الجديد كـرد.`, event.threadID, (err, info) => {
-    global.client.handleReply.push({ name: "نظام_وايد", author: senderID, messageID: info.messageID, type: "write", fileName });
-  }, event.messageID);
-}
-
-// ── دالة إعادة التحميل الفوري ──
-function reloadCommand(fp, name) {
-  delete require.cache[require.resolve(fp)];
-  const newMod = require(fp);
-  global.client.commands.set(name.toLowerCase(), newMod);
-}
-
-// ── دالة تنفيذ الأكواد ──
-async function executeEval(api, event, code) {
-  try {
-    let result = await eval(code);
-    api.sendMessage(`❥ نتيجة التنفيذ:\n${D}\n${JSON.stringify(result, null, 2)}\n${D}`, event.threadID, event.messageID);
-  } catch (e) {
-    api.sendMessage(`❌ خطأ في الكود:\n${e.message}`, event.threadID, event.messageID);
-  }
-}
