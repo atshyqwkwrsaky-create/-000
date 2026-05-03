@@ -1,11 +1,11 @@
 module.exports.config = {
-  name: "ابتيم",
+  name: "ابتايم",
   version: "2.0.0",
   hasPermssion: 0,
   credits: "Mustapha + تعديل",
   description: "عرض معلومات البوت",
   commandCategory: "النظام",
-  usages: "ابتيم",
+  usages: "ابتايم",
   cooldowns: 3
 };
 
