@@ -1,15 +1,16 @@
 module.exports.config = {
   name: "ابتايم",
-  version: "2.0.0",
+  version: "1.0.0",
   hasPermssion: 0,
-  credits: "Mustapha + تعديل",
-  description: "عرض معلومات البوت",
+  credits: "Mustapha",
+  description: "عرض معلومات السيرفر",
   commandCategory: "النظام",
   usages: "ابتايم",
   cooldowns: 3
 };
 
 module.exports.run = async function ({ api, event }) {
+  const os = require("os");
   const moment = require("moment-timezone");
 
   const uptime = process.uptime();
@@ -17,31 +18,35 @@ module.exports.run = async function ({ api, event }) {
   const minutes = Math.floor((uptime % 3600) / 60);
   const seconds = Math.floor(uptime % 60);
 
-  const groups = global.data?.threadInfo?.size || 0;
-  const users = global.data?.users?.size || global.data?.allUserID?.length || 0;
+  const totalMem = (os.totalmem() / 1024 / 1024).toFixed(0);
+  const freeMem = (os.freemem() / 1024 / 1024).toFixed(0);
+  const usedMem = totalMem - freeMem;
+  const memUsage = ((usedMem / totalMem) * 100).toFixed(0);
 
-  const now = moment.tz("Africa/Algiers");
-  const timeStr = now.format("HH:mm:ss");
-  const dateStr = now.format("YYYY-MM-DD");
+  const cpuModel = os.cpus()[0].model;
+  const cpuCores = os.cpus().length;
+  const osType = `${os.type()} ${os.release()}`;
+  const currentTime = moment.tz("Africa/Algiers").format("YYYY-MM-DD | HH:mm:ss");
 
-  const message =
-`ꜜ◆───────────────◆ꜜ
-┇⇈وقتꜛ✦• 〘• ⏳•〙التشغيل •✦⇊┇
+  const message = `
+== 📊 بيانات السيرفر 📊 ==
 
+⏳ مدة تشغيل البوت: ${hours} ساعة ${minutes} دقيقة ${seconds} ثانية ✅
 
-⏳ Runtime
-• ${hours}h ${minutes}m ${seconds}s
+🖥️ نظام التشغيل: ${osType} ✅
 
-👥 Groups
-${groups} •
+🧠 عدد الأنوية: ${cpuCores} ✅
 
-👤 Users
-${users} •
+⚙️ نوع المعالج: ${cpuModel} ✅
 
-🕒 Time
-${timeStr} | ${dateStr} •
+💾 ذاكرة كلية: ${totalMem} MB ✅
 
-ꜛ◆───────────────◆ꜛ`;
+📉 ذاكرة متاحة: ${freeMem} MB ✅
+
+📊 استهلاك الرام: ${memUsage}% ✅
+
+🕰️ الوقت الحالي: ${currentTime} ✅
+`;
 
   api.sendMessage(message, event.threadID, event.messageID);
 };
