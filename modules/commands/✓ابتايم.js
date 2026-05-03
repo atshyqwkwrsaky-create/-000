@@ -1,45 +1,47 @@
-module.exports.run = async function ({ api, event, Threads, Users }) {
-  const os = require("os");
+module.exports.config = {
+  name: "ابتيم",
+  version: "2.0.0",
+  hasPermssion: 0,
+  credits: "Mustapha + تعديل",
+  description: "عرض معلومات البوت",
+  commandCategory: "النظام",
+  usages: "ابتيم",
+  cooldowns: 3
+};
+
+module.exports.run = async function ({ api, event }) {
   const moment = require("moment-timezone");
 
-  // uptime
   const uptime = process.uptime();
   const hours = Math.floor(uptime / 3600);
   const minutes = Math.floor((uptime % 3600) / 60);
   const seconds = Math.floor(uptime % 60);
 
-  // time
-  const time = moment.tz("Africa/Algiers").format("HH:mm:ss | YYYY-MM-DD");
+  const groups = global.data?.threadInfo?.size || 0;
+  const users = global.data?.users?.size || global.data?.allUserID?.length || 0;
 
-  // counts
-  let threadCount = 0;
-  let userCount = 0;
+  const now = moment.tz("Africa/Algiers");
+  const timeStr = now.format("HH:mm:ss");
+  const dateStr = now.format("YYYY-MM-DD");
 
-  try {
-    threadCount = (await Threads.getAll()).length;
-    userCount = (await Users.getAll()).length;
-  } catch (e) {
-    console.log(e);
-  }
-
-  const message = `
-ꜜ◆───────────────◆ꜜ
+  const message =
+`ꜜ◆──────────────◆ꜜ
 ┇⇈وقتꜛ✦• 〘• ⏳•〙التشغيل •✦⇊┇
+
 
 ⏳ Runtime
 • ${hours}h ${minutes}m ${seconds}s
 
 👥 Groups
-${threadCount} •
+${groups} •
 
 👤 Users
-${userCount} •
+${users} •
 
 🕒 Time
-${time} •
+${timeStr} | ${dateStr} •
 
-ꜛ◆───────────────◆ꜛ
-`;
+ꜛ◆──────────────◆ꜛ`;
 
   api.sendMessage(message, event.threadID, event.messageID);
 };
